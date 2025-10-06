@@ -101,7 +101,7 @@ Thumbs.db
 *.sqlite
 
 # Prisma
-backend/prisma/migrations/
+# backend/prisma/migrations/ # Allow migrations to be committed for team collaboration
 
 # Docker
 *.log
