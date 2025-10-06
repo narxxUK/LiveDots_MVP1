@@ -1,0 +1,288 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  username    String   @unique
+  displayName String
+  avatar      String?
+  
+  // Authentication fields
+  passwordHash String?
+  firebaseUid  String? @unique
+  emailVerified Boolean @default(false)
+  
+  // Location data
+  latitude  Float?
+  longitude Float?
+  city      String?
+  country   String?
+  
+  // User settings
+  isPrivate    Boolean @default(false)
+  isVerified   Boolean @default(false)
+  role         UserRole @default(USER)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastActive DateTime?
+  
+  // Relations
+  streams         Stream[]
+  chatMessages    ChatMessage[]
+  reactions       StreamReaction[]
+  giftsSent       GiftTransaction[] @relation("GiftSender")
+  giftsReceived   GiftTransaction[] @relation("GiftReceiver")
+  following       Follow[] @relation("Follower")
+  followers       Follow[] @relation("Following")
+  sessions        Session[]
+  loginAttempts   LoginAttempt[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  STREAMER
+  MODERATOR
+  ADMIN
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  deviceInfo String?
+  ipAddress String?
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  ipAddress String
+  success   Boolean
+  userAgent String?
+  timestamp DateTime @default(now())
+  
+  user User? @relation(fields: [userId], references: [id])
+  
+  @@map("login_attempts")
+}
+
+model Stream {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  category    StreamCategory
+  
+  // Stream state
+  isLive      Boolean @default(false)
+  viewerCount Int     @default(0)
+  
+  // Location
+  latitude    Float
+  longitude   Float
+  
+  // Device and technical info
+  deviceType   DeviceType
+  thumbnailUrl String?
+  rtcToken     String?
+  agoraChannel String?
+  
+  // Timestamps
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatMessages ChatMessage[]
+  reactions    StreamReaction[]
+  gifts        GiftTransaction[]
+  analytics    StreamAnalytics[]
+  
+  @@map("streams")
+}
+
+enum StreamCategory {
+  TRAVEL
+  MUSIC
+  FOOD
+  SPORTS
+  EDUCATION
+  ENTERTAINMENT
+  LIFESTYLE
+  TECHNOLOGY
+  OTHER
+}
+
+enum DeviceType {
+  PHONE
+  AI_GLASSES
+}
+
+model ChatMessage {
+  id       String   @id @default(cuid())
+  streamId String
+  userId   String
+  message  String
+  type     MessageType @default(TEXT)
+  
+  // Moderation
+  isDeleted Boolean @default(false)
+  isPinned  Boolean @default(false)
+  
+  timestamp DateTime @default(now())
+  
+  // Relations
+  stream Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("chat_messages")
+}
+
+enum MessageType {
+  TEXT
+  EMOJI
+  GIFT
+  SYSTEM
+}
+
+model StreamReaction {
+  id       String   @id @default(cuid())
+  streamId String
+  userId   String
+  emoji    String
+  timestamp DateTime @default(now())
+  
+  // Relations
+  stream Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([streamId, userId, emoji])
+  @@map("stream_reactions")
+}
+
+model Gift {
+  id        String @id @default(cuid())
+  name      String @unique
+  icon      String
+  value     Int
+  animation String?
+  isActive  Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  transactions GiftTransaction[]
+  
+  @@map("gifts")
+}
+
+model GiftTransaction {
+  id         String   @id @default(cuid())
+  streamId   String
+  giftId     String
+  senderId   String
+  receiverId String
+  quantity   Int      @default(1)
+  totalValue Int
+  
+  timestamp DateTime @default(now())
+  
+  // Relations
+  stream   Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  gift     Gift   @relation(fields: [giftId], references: [id])
+  sender   User   @relation("GiftSender", fields: [senderId], references: [id])
+  receiver User   @relation("GiftReceiver", fields: [receiverId], references: [id])
+  
+  @@map("gift_transactions")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model StreamAnalytics {
+  id       String   @id @default(cuid())
+  streamId String
+  
+  // Metrics
+  totalViewers    Int @default(0)
+  peakViewers     Int @default(0)
+  averageViewTime Int @default(0) // in seconds
+  totalMessages   Int @default(0)
+  totalGifts      Int @default(0)
+  totalRevenue    Int @default(0) // in cents
+  
+  // Time periods
+  recordedAt DateTime @default(now())
+  
+  // Relations
+  stream Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  @@map("stream_analytics")
+}
+
+model Report {
+  id       String     @id @default(cuid())
+  reporterId String
+  targetType ReportTargetType
+  targetId   String
+  reason     String
+  details    String?
+  status     ReportStatus @default(PENDING)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("reports")
+}
+
+enum ReportTargetType {
+  USER
+  STREAM
+  MESSAGE
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}

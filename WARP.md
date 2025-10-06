@@ -1,10 +1,10 @@
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
-# Rules
-
-## Project Overview
+# Project Overview
 
 LiveDots is a cross-platform mobile app for live streaming with discovery through an interactive 3D globe interface.
+
+# Rules
 
 ## Core Architecture
 
@@ -23,7 +23,7 @@ Primary Framework: React Native (as mentioned in your requirements)
 
 ### Backend Infrastructure
 Runtime: Node.js with Express.js
--  Database: PostgreSQL (primary) + Redis (caching/sessions)
+-  Database: PostgreSQL (primary) with PostGIS for geospatial data + Redis (caching/sessions)
 -  Authentication: Firebase Auth for OAuth providers (Google, Apple, Facebook) + custom JWT implementation for email/password
 -  Real-time Features: Socket.IO for chat and real-time updates
 

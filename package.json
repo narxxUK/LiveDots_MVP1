@@ -1,0 +1,38 @@
+{
+  "name": "livedots-mvp1",
+  "version": "1.0.0",
+  "description": "LiveDots - Cross-platform mobile app for live streaming with 3D globe discovery",
+  "private": true,
+  "workspaces": [
+    "mobile",
+    "backend/services/*",
+    "shared"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:mobile && npm run install:backend",
+    "install:mobile": "cd mobile && npm install",
+    "install:backend": "cd backend && npm install",
+    "dev:mobile": "cd mobile && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "build:mobile:ios": "cd mobile && npm run ios",
+    "build:mobile:android": "cd mobile && npm run android",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^13.0.0"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx,json,md}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

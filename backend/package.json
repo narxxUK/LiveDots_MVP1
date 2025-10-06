@@ -1,0 +1,33 @@
+{
+  "name": "livedots-backend",
+  "version": "1.0.0",
+  "description": "LiveDots Backend Services",
+  "private": true,
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:auth\" \"npm run dev:streaming\" \"npm run dev:chat\" \"npm run dev:user\" \"npm run dev:location\"",
+    "dev:auth": "cd services/auth && npm run dev",
+    "dev:streaming": "cd services/streaming && npm run dev",
+    "dev:chat": "cd services/chat && npm run dev",
+    "dev:user": "cd services/user && npm run dev",
+    "dev:location": "cd services/location && npm run dev",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "prisma:generate": "npm run prisma:generate --workspaces",
+    "prisma:migrate": "npm run prisma:migrate --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "docker-compose": "^0.24.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "nodemon": "^3.0.0",
+    "ts-node": "^10.9.0"
+  }
+}

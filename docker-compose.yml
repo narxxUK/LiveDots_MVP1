@@ -1,0 +1,173 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: livedots-postgres
+    environment:
+      POSTGRES_DB: livedots
+      POSTGRES_USER: livedots
+      POSTGRES_PASSWORD: livedots_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - livedots
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: livedots-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - livedots
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./backend/services/auth
+      dockerfile: Dockerfile
+    container_name: livedots-auth
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://livedots:livedots_dev_password@postgres:5432/livedots
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-jwt-secret-key
+      - FIREBASE_PROJECT_ID=your-firebase-project
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend/services/auth:/app
+      - /app/node_modules
+    networks:
+      - livedots
+
+  # Streaming Service
+  streaming-service:
+    build:
+      context: ./backend/services/streaming
+      dockerfile: Dockerfile
+    container_name: livedots-streaming
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - DATABASE_URL=postgresql://livedots:livedots_dev_password@postgres:5432/livedots
+      - REDIS_URL=redis://redis:6379
+      - AGORA_APP_ID=your-agora-app-id
+      - AGORA_APP_CERTIFICATE=your-agora-certificate
+      - AWS_ACCESS_KEY_ID=your-aws-key
+      - AWS_SECRET_ACCESS_KEY=your-aws-secret
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend/services/streaming:/app
+      - /app/node_modules
+    networks:
+      - livedots
+
+  # Chat Service
+  chat-service:
+    build:
+      context: ./backend/services/chat
+      dockerfile: Dockerfile
+    container_name: livedots-chat
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - DATABASE_URL=postgresql://livedots:livedots_dev_password@postgres:5432/livedots
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend/services/chat:/app
+      - /app/node_modules
+    networks:
+      - livedots
+
+  # User Management Service
+  user-service:
+    build:
+      context: ./backend/services/user
+      dockerfile: Dockerfile
+    container_name: livedots-user
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - DATABASE_URL=postgresql://livedots:livedots_dev_password@postgres:5432/livedots
+      - AWS_ACCESS_KEY_ID=your-aws-key
+      - AWS_SECRET_ACCESS_KEY=your-aws-secret
+      - AWS_S3_BUCKET=livedots-avatars
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend/services/user:/app
+      - /app/node_modules
+    networks:
+      - livedots
+
+  # Location Service
+  location-service:
+    build:
+      context: ./backend/services/location
+      dockerfile: Dockerfile
+    container_name: livedots-location
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=development
+      - PORT=3005
+      - DATABASE_URL=postgresql://livedots:livedots_dev_password@postgres:5432/livedots
+      - REDIS_URL=redis://redis:6379
+      - GOOGLE_MAPS_API_KEY=your-google-maps-key
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend/services/location:/app
+      - /app/node_modules
+    networks:
+      - livedots
+
+  # NGINX Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: livedots-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - auth-service
+      - streaming-service
+      - chat-service
+      - user-service
+      - location-service
+    networks:
+      - livedots
+
+networks:
+  livedots:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
